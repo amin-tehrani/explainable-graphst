@@ -1,0 +1,52 @@
+Bootstrap: docker
+From: pytorch/pytorch:2.4.1-cuda11.8-cudnn9-runtime
+
+%labels
+    Author Navid Pourhadi
+    Description PyTorch Geometric GPU container with full ML stack suitable for implementing models of GNN based on pytorch geometric
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Install system dependencies
+    apt-get update && apt-get install -y \
+        git \
+        curl \
+        vim \
+        wget \
+        ca-certificates \
+        libglib2.0-0 \
+        libsm6 \
+        libxrender1 \
+        libxext6 \
+        libjpeg-dev \
+        libpng-dev \
+        python3-pip \
+        && apt-get clean
+
+    # Upgrade pip, setuptools
+    pip install --upgrade pip setuptools wheel
+
+    # PyTorch Geometric dependencies (match PyTorch & CUDA versions!)
+    pip install torch-scatter -f https://data.pyg.org/whl/torch-2.4.1+cu118.html
+    pip install torch-sparse -f https://data.pyg.org/whl/torch-2.4.1+cu118.html
+    pip install torch-cluster -f https://data.pyg.org/whl/torch-2.4.1+cu118.html
+    pip install torch-spline-conv -f https://data.pyg.org/whl/torch-2.4.1+cu118.html
+    pip install torch-geometric
+
+    # Core ML/Data packages
+    pip install numpy pandas matplotlib seaborn scikit-learn scipy tqdm
+
+    # Optional: Graph tools & logging
+    pip install networkx tensorboard
+
+    # Optional: Development tools
+    pip install ipython jupyterlab
+
+%environment
+    export PYTHONUNBUFFERED=1
+    export CUDA_VISIBLE_DEVICES=0
+
+%runscript
+    echo "PyTorch Geometric ML Training Container"
+    exec python3 "$@"

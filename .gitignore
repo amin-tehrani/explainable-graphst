@@ -1,0 +1,5 @@
+venv/
+GraphST_github/GraphST.egg-info
+GraphST_github/
+dataset
+**.pyc

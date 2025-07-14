@@ -1,0 +1,50 @@
+Bootstrap: docker
+From: pytorch/pytorch:2.6.0-cuda12.6-cudnn9-runtime
+
+%labels
+    Author Amin Tehrani
+    Description Singularity image for Explainable GNN project with PyTorch and PyTorch Geometric
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Install system dependencies
+    apt-get update && apt-get install -y \
+        git \
+        curl \
+        vim \
+        wget \
+        ca-certificates \
+        libglib2.0-0 \
+        libsm6 \
+        libxrender1 \
+        libxext6 \
+        libjpeg-dev \
+        libpng-dev \
+        python3-pip \
+        && apt-get clean
+
+    pip install --upgrade pip setuptools wheel
+
+    pip install torch-geometric==2.6.1 networkx
+
+    pip install networkx=3.4.2 scanpy scipy matplotlib
+
+    pip install ipython jupyterlab
+
+
+%files
+    explain.ipynb /workspace/explain.ipynb
+    explain_module /workspace/explain_module
+    data /workspace/data
+
+
+%environment
+    export PYTHONUNBUFFERED=1
+    export PYTHONUNBUFFERED=1
+    export PYTHONDONTWRITEBYTECODE=1
+    export PATH=/usr/local/bin:$PATH
+
+%runscript
+    echo "PyTorch Geometric ML Training Container"
+    exec python3 "$@"
