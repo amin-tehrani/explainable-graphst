@@ -1,0 +1,39 @@
+Bootstrap: docker
+From: pytorch/pytorch:2.6.0-cuda12.6-cudnn9-runtime
+
+%labels
+    Author MohammadAmin Hajibagher Tehran
+
+%post
+
+    export MAKEFLAGS="-j1"
+
+
+    # Install system dependencies
+    apt-get update && apt-get install -y \
+        git \
+        curl \
+        nano \
+        wget \
+        ca-certificates \
+        && apt-get clean
+
+    # Upgrade pip, setuptools
+    pip install --no-cache-dir --upgrade pip setuptools wheel
+
+    pip install --no-cache-dir torch-geometric==2.6.1 networkx==3.4.2 matplotlib==3.10 scanpy==1.11 scipy==1.15.2
+
+
+    # Core ML/Data packages
+    # pip install --no-cache-dir numpy pandas matplotlib seaborn scikit-learn scipy tqdm
+
+    # Optional: Graph tools & logging
+    # pip install networkx tensorboard
+
+
+%environment
+    # export PYTHONUNBUFFERED=1
+    # export CUDA_VISIBLE_DEVICES=0
+
+%runscript
+    exec python3 "$@"
