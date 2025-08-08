@@ -55,14 +55,16 @@ class AvgReadout(nn.Module):
         return F.normalize(global_emb, p=2, dim=1) 
 
 class BaseEncoder(Module):
-    def __init__(self, in_features, out_features, graph_neigh, dropout=0.0, act=F.relu, is_sparse=False):
+    def __init__(self, in_features, out_features, graph_neigh, dropout=0.0, act='relu', is_sparse=False):
         super(BaseEncoder, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.graph_neigh = graph_neigh
         self.dropout = dropout
-        self.act = act
+        self.act_str = act
         self.is_sparse = is_sparse
+
+        self.act = getattr(F, self.act_str)
         
         # Replace manual weight matrices with GCNConv layers
         self.gcn1 = GCNConv(self.in_features, self.out_features, bias=False)
@@ -72,6 +74,16 @@ class BaseEncoder(Module):
         self.disc = Discriminator(self.out_features)
         self.sigm = nn.Sigmoid()
         self.read = AvgReadout()
+
+    def get_args_dict(self): 
+        return {
+            "in_features": self.in_features,
+            "out_features": self.out_features,
+            "graph_neigh": self.graph_neigh,
+            "dropout": self.dropout,
+            "act": self.act_str,
+            "is_sparse": self.is_sparse
+        }
 
         
     def forward(self, feat, feat_a, adj):
