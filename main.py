@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch_geometric.explain import Explainer, GNNExplainer
-from explain_gnnexplainer import explain
+import time
 
 device = torch.device('cpu')
 
@@ -46,14 +46,20 @@ def explain_gnnexplainer():
 
 
 
-
 if __name__ == "__main__":
+    import multiprocessing as mp
+    mp.set_start_method("fork", force=True)  # Only once per program
+    
+
+
     adata = load_dataset_V1_Human_Lymph_Node()
     annotate_graphclusters_V1_Human_Lymph_Node(adata)
 
     gst = get_graphst(adata)
 
-    if path:=input("Load graphST? Enter the path or N for training. Leave empty to use default path: graphst_base_encoder.pt\n") == "N":
+    # path=input("Load graphST? Enter the path or N for training. Leave empty to use default path: graphst_base_encoder.pt\n")
+    path=""
+    if path == "N":
         train_graphst(gst)
         if save_path:=input("Save graphST? Enter the path or N for no saving. Leave empty to use default path: graphst_base_encoder.pt\n") != "N":
             if save_path:
@@ -74,7 +80,11 @@ if __name__ == "__main__":
     node_ids = [adata.obs.index.get_loc(barcode) for barcode in node_barcodes]
     
 
+    from explain_gnnexplainer import explain
+
     limit = 100
     epochs = 10
-    res = explain(base_encoder, gst.features, gst.adj, node_ids[:limit], epochs=epochs)
-    print(res)
+
+
+    for i in explain(base_encoder, gst.features, gst.adj, node_ids[:limit], epochs=epochs):
+        print(i)
