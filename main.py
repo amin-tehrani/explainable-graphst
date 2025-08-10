@@ -9,7 +9,7 @@ import torch
 from torch_geometric.explain import Explainer, GNNExplainer
 import time
 
-device = torch.device('cpu')
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_dataset_V1_Human_Lymph_Node() -> AnnData:
     return sq.read.visium("dataset/V1_Human_Lymph_Node")
@@ -41,16 +41,12 @@ def apply_clustering(gadata: AnnData, method="leiden", **kwargs):
     clustering(gadata, method, **kwargs)
 
 
-def explain_gnnexplainer():
-    pass
-
-
 
 if __name__ == "__main__":
     import multiprocessing as mp
     mp.set_start_method("fork", force=True)  # Only once per program
     
-
+    print(device)
 
     adata = load_dataset_V1_Human_Lymph_Node()
     annotate_graphclusters_V1_Human_Lymph_Node(adata)
@@ -80,11 +76,60 @@ if __name__ == "__main__":
     node_ids = [adata.obs.index.get_loc(barcode) for barcode in node_barcodes]
     
 
-    from explain_gnnexplainer import explain
+    from explain_gnnexplainer import explain, explain_batch
 
-    limit = 100
-    epochs = 10
+    limit = 2
+    epochs = 250
+    
+    ########
+    from torch_geometric.utils import dense_to_sparse
+    edge_index, _ = dense_to_sparse(gst.adj)
+
+    _xmodel = ExplainableEncoder(base_encoder).to(device)
+    _explainer = Explainer(
+        model=_xmodel,
+        algorithm=GNNExplainer(epochs=epochs),
+        explanation_type='model',
+        node_mask_type='attributes',
+        edge_mask_type=None,
+        model_config=dict(
+            mode='multiclass_classification',
+            task_level='node',
+            return_type='log_probs',
+        ),
+    )
+
+    explainer2 = Explainer(
+        model=_xmodel,
+        algorithm=GNNExplainer(epochs=epochs),
+        explanation_type='model',
+        node_mask_type='attributes',
+        edge_mask_type=None,
+        model_config=dict(
+            mode='regression',
+            task_level='node',
+            # return_type='log_probs',
+        ),
+    )
+
+    explainer3 = Explainer(
+        model=_xmodel,
+        algorithm=GNNExplainer(epochs=250),
+        explanation_type='model',
+        node_mask_type='attributes',
+        edge_mask_type=None,
+        model_config=dict(
+            mode='regression',
+            task_level='node',
+            # return_type='log_probs',
+        ),
+    )
 
 
-    for i in explain(base_encoder, gst.features, gst.adj, node_ids[:limit], epochs=epochs):
-        print(i)
+    res = _explainer(gst.features, edge_index, index=1)
+    res2 = explainer2(gst.features, edge_index, index=1)
+    res3 = explainer3(gst.features, edge_index)
+
+    # print("res: ", )
+    # for res in explain(device, base_encoder, gst.features, gst.adj, node_ids[:limit], epochs=epochs, parallel_num_proc=1):
+    #     print(res)
