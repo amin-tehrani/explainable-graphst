@@ -127,11 +127,23 @@ class GraphStEncoder(Module):
         hiden_emb, h, ret, ret_a, _, _ = self.base_encoder(feat, feat_a, adj)
         return hiden_emb, h, ret, ret_a
 
+type SimilarityFunc = callable[[torch.Tensor, torch.Tensor], torch.Tensor]
 class ExplainableEncoder(Module):
-    def __init__(self, base_encoder: Module):
+    def __init__(self, base_encoder: Module, feat_a, similarity: str | SimilarityFunc = 'default'):
         super(ExplainableEncoder, self).__init__()
         self.base_encoder = base_encoder
-    
+        self.similarity = similarity
+        self.feat_a = feat_a
+
+    @staticmethod
+    def default(emb, emb_a):
+        if method == 'default':
+            return torch.mm(emb, emb_a.T)
+        elif callable(method):
+            return method(emb, emb_a)
+        else:
+            raise ValueError(f"Unknown similarity method: {method}")
+
     def forward(self, x, edge_index, edge_weight=None):
         # Convert edge_index to dense adjacency matrix
         adj = torch.zeros((x.size(0), x.size(0)), device=x.device)
@@ -140,14 +152,15 @@ class ExplainableEncoder(Module):
         else:
             adj[edge_index[0], edge_index[1]] = 1.0
         
+        # print(x.shape)
         feat = x
-        feat_a = permutation(feat)
+        feat_a = self.feat_a
         hiden_emb, h, ret, ret_a, emb, emb_a = self.base_encoder(feat, feat_a, adj)
+        # print(ret.shape, ret_a.shape)
 
         similarity = torch.mm(emb, emb_a.T)  # Compute similarity between original and augmented embeddings
 
-        return similarity
-
+        return similarity        
 
 class Encoder(Module):
     def __init__(self, in_features, out_features, graph_neigh, dropout=0.0, act=F.relu):
