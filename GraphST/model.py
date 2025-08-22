@@ -5,6 +5,8 @@ from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
 from torch_geometric.nn import GCNConv
 from torch_geometric.utils import dense_to_sparse
+from . import similarity
+from typing import Union, Literal, Callable
 
 from .preprocess import permutation
 
@@ -127,22 +129,20 @@ class GraphStEncoder(Module):
         hiden_emb, h, ret, ret_a, _, _ = self.base_encoder(feat, feat_a, adj)
         return hiden_emb, h, ret, ret_a
 
-type SimilarityFunc = callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+
 class ExplainableEncoder(Module):
-    def __init__(self, base_encoder: Module, feat_a, similarity: str | SimilarityFunc = 'default'):
+    def __init__(self, base_encoder: Module, feat_a, sim_func = None):
         super(ExplainableEncoder, self).__init__()
         self.base_encoder = base_encoder
-        self.similarity = similarity
         self.feat_a = feat_a
 
-    @staticmethod
-    def default(emb, emb_a):
-        if method == 'default':
-            return torch.mm(emb, emb_a.T)
-        elif callable(method):
-            return method(emb, emb_a)
+        if sim_func is not None:
+            self.similarity_fn = sim_func
         else:
-            raise ValueError(f"Unknown similarity method: {method}")
+            self.similarity_fn = self.default_similarity_fn
+
+    def default_similarity_fn(self, hiden_emb, h, ret, ret_a, emb, emb_a):
+        return torch.exp(-torch.norm(hiden_emb - h, p=2))
 
     def forward(self, x, edge_index, edge_weight=None):
         # Convert edge_index to dense adjacency matrix
@@ -158,7 +158,7 @@ class ExplainableEncoder(Module):
         hiden_emb, h, ret, ret_a, emb, emb_a = self.base_encoder(feat, feat_a, adj)
         # print(ret.shape, ret_a.shape)
 
-        similarity = torch.mm(emb, emb_a.T)  # Compute similarity between original and augmented embeddings
+        similarity = self.similarity_fn(hiden_emb, h, ret, ret_a, emb, emb_a)
 
         return similarity        
 
