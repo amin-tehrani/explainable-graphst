@@ -4,3 +4,5 @@ GraphST_github/
 dataset
 **.pyc
 runner.sif
+*.pkl
+explanations/
